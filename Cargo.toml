@@ -4,6 +4,7 @@ authors = ["maudi"]
 name = "rusty_flight"
 edition = "2024"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 
 
 # To run all the tests via `cargo test` the tests need to be explicitly disabled for the binary targets
