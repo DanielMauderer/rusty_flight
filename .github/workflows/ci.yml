@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Floating nightly is intentional (see deny.toml / plan); pinning is avoided.
+  TARGET: thumbv7em-none-eabihf
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      # Builds for the embedded target declared in .cargo/config.toml.
+      # NB: avoid `--all-targets` here — it tries to build the no_std bins as
+      # test harnesses (needs the `test` crate, absent on bare metal), ignoring
+      # `test = false` in Cargo.toml. Split into code + test targets instead.
+      - run: cargo clippy --lib --bins -- -D warnings
+      - run: cargo clippy --tests -- -D warnings
+
+  build:
+    name: build (cross-compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      # flip-link is the configured linker (.cargo/config.toml); the real link
+      # step exercises link.x / defmt.x, which `cargo check` would skip.
+      - name: Install flip-link
+        run: cargo install flip-link --locked
+      - run: cargo build --bins
+      - run: cargo build --release --bins
+
+  test-build:
+    name: test (compile-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      - name: Install flip-link
+        run: cargo install flip-link --locked
+      # On-target tests (defmt-test) need real hardware + probe-rs to *run*.
+      # In CI we only verify they compile and link for the target.
+      - run: cargo test --no-run
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --no-deps
+
+  supply-chain:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses bans sources
+
+  size:
+    name: firmware size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      - name: Install flip-link
+        run: cargo install flip-link --locked
+      - name: Install cargo-binutils
+        run: cargo install cargo-binutils --locked
+      # Informational only (non-blocking): track flash/RAM usage over time.
+      - name: Report binary sizes
+        run: |
+          echo "## Firmware size (release)" >> "$GITHUB_STEP_SUMMARY"
+          for bin in bitfield format hello levels overflow panic; do
+            echo "### $bin" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cargo size --release --bin "$bin" -- -A >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done

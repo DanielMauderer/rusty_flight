@@ -1,0 +1,38 @@
+# cargo-deny configuration — supply-chain hygiene for the dependency tree.
+# Run locally with: cargo deny check
+# Docs: https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+# Fail on any crate with an open RUSTSEC advisory.
+version = 2
+yanked = "deny"
+# Add RUSTSEC IDs here to temporarily accept a known issue, e.g.:
+# ignore = ["RUSTSEC-0000-0000"]
+ignore = []
+
+[licenses]
+version = 2
+# This project is dual-licensed Apache-2.0 / MIT; allow the common permissive
+# licenses found in the embedded ecosystem. Tighten/loosen as needed.
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+# Confidence threshold for detecting a license from its text (0.0 - 1.0).
+confidence-threshold = 0.8
+
+[bans]
+# Warn when multiple versions of the same crate are pulled in (bloat risk on a
+# constrained MCU). Set to "deny" once the tree is clean if you want a hard gate.
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+# Only allow crates from crates.io by default.
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,8 @@
+{
+  "rust-analyzer": {
+    "check": {
+      "allTargets": false,
+      "extraArgs": ["--bins"]
+    }
+  }
+}
