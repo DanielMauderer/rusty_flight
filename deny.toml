@@ -6,9 +6,13 @@
 # Fail on any crate with an open RUSTSEC advisory.
 version = 2
 yanked = "deny"
-# Add RUSTSEC IDs here to temporarily accept a known issue, e.g.:
-# ignore = ["RUSTSEC-0000-0000"]
-ignore = []
+# Add RUSTSEC IDs here to accept a known issue that has no available fix.
+ignore = [
+    # `bare-metal` 1.0.0 is deprecated/unmaintained. Pulled in transitively by
+    # stm32f7xx-hal 0.8 (via stm32f7); no safe upgrade is available until the
+    # HAL drops it. Revisit when bumping stm32f7xx-hal.
+    "RUSTSEC-2026-0110",
+]
 
 [licenses]
 version = 2
