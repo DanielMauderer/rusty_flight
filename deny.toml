@@ -14,14 +14,12 @@ ignore = []
 version = 2
 # This project is dual-licensed Apache-2.0 / MIT; allow the common permissive
 # licenses found in the embedded ecosystem. Tighten/loosen as needed.
+# Only the licenses actually present in the dependency tree are listed, to keep
+# `license-not-encountered` warnings out of CI. Add more here as deps change.
 allow = [
     "Apache-2.0",
     "MIT",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
     "Unicode-3.0",
-    "Zlib",
 ]
 # Confidence threshold for detecting a license from its text (0.0 - 1.0).
 confidence-threshold = 0.8
